@@ -1,0 +1,145 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      qwen:
+        condition: service_started
+    ports:
+      - "8080:8080"
+
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_DB: rag
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./db/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d rag"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  # The ai/qwen3.5 image is expected to expose an OpenAI-compatible API.
+  qwen:
+    image: ai/qwen3.5
+    ports:
+      - "8000:8000"
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.8
+    environment:
+      CLICKHOUSE_DB: default
+      CLICKHOUSE_USER: clickhouse
+      CLICKHOUSE_PASSWORD: clickhouse
+    ports:
+      - "8123:8123"
+      - "9000:9000"
+    volumes:
+      - clickhouse_data:/var/lib/clickhouse
+
+  minio:
+    image: minio/minio:latest
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minio
+      MINIO_ROOT_PASSWORD: minio12345
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio_data:/data
+
+  langfuse-web:
+    image: langfuse/langfuse:2
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      clickhouse:
+        condition: service_started
+      minio:
+        condition: service_started
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/langfuse
+      DIRECT_URL: postgresql://postgres:postgres@postgres:5432/langfuse
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      NEXTAUTH_URL: http://localhost:3000
+      NEXTAUTH_SECRET: dev_nextauth_secret_change_me
+      SALT: dev_salt_change_me
+      TELEMETRY_ENABLED: "false"
+      CLICKHOUSE_URL: http://clickhouse:8123
+      CLICKHOUSE_MIGRATION_URL: clickhouse://clickhouse:9000
+      CLICKHOUSE_USER: clickhouse
+      CLICKHOUSE_PASSWORD: clickhouse
+      CLICKHOUSE_DB: default
+      S3_EVENT_UPLOAD_BUCKET: langfuse
+      S3_EVENT_UPLOAD_REGION: us-east-1
+      S3_EVENT_UPLOAD_ACCESS_KEY_ID: minio
+      S3_EVENT_UPLOAD_SECRET_ACCESS_KEY: minio12345
+      S3_EVENT_UPLOAD_ENDPOINT: http://minio:9000
+      S3_EVENT_UPLOAD_FORCE_PATH_STYLE: "true"
+    ports:
+      - "3000:3000"
+
+  langfuse-worker:
+    image: langfuse/langfuse:2
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      clickhouse:
+        condition: service_started
+      minio:
+        condition: service_started
+    command: ["worker"]
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/langfuse
+      DIRECT_URL: postgresql://postgres:postgres@postgres:5432/langfuse
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      NEXTAUTH_URL: http://localhost:3000
+      NEXTAUTH_SECRET: dev_nextauth_secret_change_me
+      SALT: dev_salt_change_me
+      TELEMETRY_ENABLED: "false"
+      CLICKHOUSE_URL: http://clickhouse:8123
+      CLICKHOUSE_MIGRATION_URL: clickhouse://clickhouse:9000
+      CLICKHOUSE_USER: clickhouse
+      CLICKHOUSE_PASSWORD: clickhouse
+      CLICKHOUSE_DB: default
+      S3_EVENT_UPLOAD_BUCKET: langfuse
+      S3_EVENT_UPLOAD_REGION: us-east-1
+      S3_EVENT_UPLOAD_ACCESS_KEY_ID: minio
+      S3_EVENT_UPLOAD_SECRET_ACCESS_KEY: minio12345
+      S3_EVENT_UPLOAD_ENDPOINT: http://minio:9000
+      S3_EVENT_UPLOAD_FORCE_PATH_STYLE: "true"
+
+volumes:
+  postgres_data:
+  clickhouse_data:
+  minio_data:
