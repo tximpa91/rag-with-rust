@@ -1,0 +1,10 @@
+#!/usr/bin/env sh
+set -eu
+
+echo "[pre-commit] Checking formatting..."
+cargo fmt --all -- --check
+
+echo "[pre-commit] Building project..."
+cargo build --all-targets
+
+echo "[pre-commit] OK"
