@@ -1,0 +1,20 @@
+---
+description: Core Rust engineering standards
+alwaysApply: true
+---
+
+# Rust Core Standards
+
+- Prefer clear, small modules and explicit types on public APIs.
+- Use `Result<T, E>` for fallible operations; avoid `unwrap()`/`expect()` in non-test code.
+- Keep functions focused; extract helpers when a function mixes parsing, IO, and business logic.
+- Favor immutable data; use mutability only where needed.
+- Add concise comments only for non-obvious logic.
+
+# Completion Checklist
+
+Before declaring work done:
+- `cargo fmt --all`
+- `cargo clippy --all-targets --all-features -- -D warnings`
+- `cargo check --all-targets --all-features`
+- `cargo test --all-targets --all-features`

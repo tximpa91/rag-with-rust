@@ -1,0 +1,19 @@
+---
+description: Rust source code conventions
+globs: **/*.rs
+alwaysApply: false
+---
+
+# Rust Code Conventions
+
+- Keep `main.rs` thin; move logic to modules/services.
+- Use structured errors (`thiserror` for domain errors, `anyhow` at app boundaries).
+- In async code, avoid blocking calls; use async-compatible clients and IO.
+- Validate external input early (HTTP payloads, env vars, DB data).
+- Prefer typed request/response structs and `serde` derives over untyped JSON maps.
+
+# API and Data Safety
+
+- Never log secrets or tokens.
+- For DB queries, prefer parameterized SQL and typed row mapping.
+- Keep SQL and schema changes explicit and reviewed.

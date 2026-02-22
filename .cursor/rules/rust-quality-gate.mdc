@@ -1,0 +1,11 @@
+---
+description: Rust PR quality gate
+alwaysApply: true
+---
+
+# Change Quality Gate
+
+- Include at least one test for new behavior (or explain why not applicable).
+- Keep diffs minimal: no unrelated refactors in feature PRs.
+- Update README/docs when setup, env vars, or commands change.
+- If tooling/config changes, note impact in the final summary.
